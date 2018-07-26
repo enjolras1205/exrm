@@ -6,6 +6,7 @@ defmodule ReleaseManager.Plugin.Consolidation do
   alias  ReleaseManager.Config
   alias  ReleaseManager.Utils
   import ReleaseManager.Utils, except: [debug: 1, info: 1, warn: 1, error: 1]
+  require Logger
 
   def before_release(%Config{verbosity: verbosity, env: env} = config) do
     build_embedded = Keyword.get(Mix.Project.config, :build_embedded, false)
@@ -27,11 +28,13 @@ defmodule ReleaseManager.Plugin.Consolidation do
       debug "Packaging consolidated protocols..."
 
       # Add overlay to relx.config which copies consolidated dir to release
-      consolidated_path = Path.join([Mix.Project.build_path, "consolidated"])
+      consolidated_path = Path.join([Mix.Project.build_path, "lib", config.name, "consolidated"])
       case File.ls(consolidated_path) do
         {:error, _} ->
+          Logger.error("consolidated notfound #{inspect consolidated_path}")
           config
         {:ok, filenames} ->
+          Logger.info("consolidated #{inspect filenames}")
           dest_path = "lib/#{config.name}-#{config.version}/consolidated"
           overlays = [overlay: Enum.map(filenames, fn name ->
             {:copy, '#{consolidated_path}/#{name}', '#{Path.join([dest_path, name])}'}
